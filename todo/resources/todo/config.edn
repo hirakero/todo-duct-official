@@ -1,8 +1,20 @@
 {:duct.profile/base
  {:duct.core/project-ns todo
-
+  
   :duct.router/ataraxy
-  {:routes {}}}
+  {:routes {[:get "/"] [:todo.handler/index]}}
+  
+  [:duct.handler.static/ok :todo.handler/index]
+  {:body {:entries "/entries"}}
+  
+  :duct.migrator/ragtime
+  {:migrations [#ig/ref :todo.migration/create-entries]}
+
+  [:duct.migrator.ragtime/sql :todo.migration/create-entries]
+  {:up ["CREATE TABLE entries (id INTEGER PRIMARY KEY, content TEXT)"]
+   :down ["DROP TABLE entries"]}
+  }
+ 
 
  :duct.profile/dev   #duct/include "dev"
  :duct.profile/local #duct/include "local"
@@ -13,3 +25,5 @@
  {}
  :duct.module/sql
  {}}
+
+
