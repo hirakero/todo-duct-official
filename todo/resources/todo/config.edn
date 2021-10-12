@@ -6,9 +6,12 @@
             [:get "/entries"] [:todo.handler.entries/list]
 
             [:post "/entries" {{:keys [description]} :body-params}] [:todo.handler.entries/create description]
-            
+
             [:get "/entries/" id] [:todo.handler.entries/find ^int id]
-            [:delete "/entries/" id] [:todo.handler.entries/destroy ^int id]}}
+            [:delete "/entries/" id] [:todo.handler.entries/destroy ^int id]
+
+            [:post "/users" {{:keys [email password]} :body-params}]
+            [:todo.handler.users/create email password]}}
 
   ;; handlers
   [:duct.handler.static/ok :todo.handler/index]
@@ -21,8 +24,7 @@
   [:duct.handler.sql/insert :todo.handler.entries/create]
   {:request {[_ description] :ataraxy/result}
    :sql ["insert into entries (description) values (?)" description]
-   :location "/entries/{}"
-   }
+   :location "/entries/{}"}
 
   [:duct.handler.sql/query-one :todo.handler.entries/find]
   {:request {[_ id] :ataraxy/result}
@@ -33,6 +35,9 @@
   {:request {[_ id] :ataraxy/result}
    :sql ["delete from entries where id = ?" id]}
   
+  :todo.handler.users/create
+  {:db #ig/ref :duct.database/sql}
+  
   ;; db migrate
   :duct.migrator/ragtime
   {:migrations [#ig/ref :todo.migration/create-entries
@@ -40,13 +45,13 @@
 
   [:duct.migrator.ragtime/sql :todo.migration/create-entries]
   {:up ["CREATE TABLE entries (
-         id serial PRIMARY KEY, 
+         id SERIAL PRIMARY KEY, 
          description TEXT)"]
    :down ["DROP TABLE entries"]}
 
   [:duct.migrator.ragtime/sql :todo.migration/create-users]
   {:up ["CREATE TABLE users (
-         id INTEGER PRIMARY KEY, 
+         id SERIAL PRIMARY KEY, 
          email TEXT UNIQUE, 
          password TEXT)"]
    :down ["DROP TABLE users"]}
