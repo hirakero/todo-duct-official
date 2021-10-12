@@ -4,18 +4,36 @@
   :duct.router/ataraxy
   {:routes {[:get "/"] [:todo.handler/index]
             [:get "/entries"] [:todo.handler.entries/list]
-            [:post "/entries" {{:keys [description]} :body-params}] [:todo.handler.entries/create description]}}
 
+            [:post "/entries" {{:keys [description]} :body-params}] [:todo.handler.entries/create description]
+            
+            [:get "/entries/" id] [:todo.handler.entries/find ^int id]
+            [:delete "/entries/" id] [:todo.handler.entries/destroy ^int id]}}
+
+  ;; handlers
   [:duct.handler.static/ok :todo.handler/index]
   {:body {:entries "/entries"}}
 
   [:duct.handler.sql/query :todo.handler.entries/list]
-  {:sql ["select * from entries"]}
+  {:sql ["select * from entries"]
+   :hrefs {:href "/entries/{id}"}}
 
   [:duct.handler.sql/insert :todo.handler.entries/create]
   {:request {[_ description] :ataraxy/result}
-   :sql ["insert into entries (description) values (?)" description]}
+   :sql ["insert into entries (description) values (?)" description]
+   :location "/entries/{}"
+   }
 
+  [:duct.handler.sql/query-one :todo.handler.entries/find]
+  {:request {[_ id] :ataraxy/result}
+   :sql ["select * from entries where id = ?" id]
+   :hrefs {:hrefs "/entries/{id}"}}
+  
+  [:duct.handler.sql/execute :todo.handler.entries/destroy]
+  {:request {[_ id] :ataraxy/result}
+   :sql ["delete from entries where id = ?" id]}
+  
+  ;; db migrate
   :duct.migrator/ragtime
   {:migrations [#ig/ref :todo.migration/create-entries]}
 
@@ -23,7 +41,6 @@
   {:up ["CREATE TABLE entries (id serial PRIMARY KEY, description TEXT)"]
    :down ["DROP TABLE entries"]}}
  
-
  :duct.profile/dev   #duct/include "dev"
  :duct.profile/local #duct/include "local"
  :duct.profile/prod  {}
