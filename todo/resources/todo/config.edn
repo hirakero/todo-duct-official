@@ -2,21 +2,22 @@
  {:duct.core/project-ns todo
 
   :duct.router/ataraxy
-  {:routes {[:get "/"] [:todo.handler/index]
-            [:get "/entries"] [:todo.handler.entries/list]
+  {:routes {"/"
+            {[:get] [:todo.handler/index]}
 
-            [:post "/entries" {{:keys [description]} :body-params}] [:todo.handler.entries/create description]
+            "/entries"
+            {[:get] [:todo.handler.entries/list]
+             [:post {{:keys [description]} :body-params}] [:todo.handler.entries/create description]
+             [:get id] [:todo.handler.entries/find ^int id]
+             [:delete id] [:todo.handler.entries/destroy ^int id]
+             }
+            "/users"
+            {[:post {{:keys [email password]} :body-params}] [:todo.handler.users/create email password]         
+             [:post "/signin" {{:keys [email password]} :body-params}] ^jws-auth [:todo.handler.users/signin email password]}
+            }
 
-            [:get "/entries/" id] [:todo.handler.entries/find ^int id]
-            [:delete "/entries/" id] [:todo.handler.entries/destroy ^int id]
+   :middleware {:jws-auth #ig/ref :duct.middleware.buddy/authentication}}
 
-            [:post "/users" {{:keys [email password]} :body-params}]
-            [:todo.handler.users/create email password]
-
-            [:post "/users/signin" {{:keys [email password]} :body-params}]
-            [:todo.handler.users/signin email password]
-            }}
- 
   ;; handlers
   ;;   entries
   [:duct.handler.static/ok :todo.handler/index]
@@ -35,19 +36,29 @@
   {:request {[_ id] :ataraxy/result}
    :sql ["select * from entries where id = ?" id]
    :hrefs {:hrefs "/entries/{id}"}}
-  
+
   [:duct.handler.sql/execute :todo.handler.entries/destroy]
   {:request {[_ id] :ataraxy/result}
    :sql ["delete from entries where id = ?" id]}
-  
+
   ;;   users
   :todo.handler.users/create
   {:db #ig/ref :duct.database/sql}
 
   :todo.handler.users/signin
   {:db #ig/ref :duct.database/sql
-   :jwt-secret "keiZ3wH1M0UFh2z05/7VG7YDOV9V2cpxzIbUwsnVfm+rVE61/+mCq3R0TPPRnY1e"}
-  
+   jwt-secret "keiZ3wH1M0UFh2z05/7VG7YDOV9V2cpxzIbUwsnVfm+rVE61/+mCq3R0TPPRnY1e"
+   }
+
+  :todo.handler.users/example1
+  {:db #ig/ref :duct.database/sql
+   ;:jwt-secret "keiZ3wH1M0UFh2z05/7VG7YDOV9V2cpxzIbUwsnVfm+rVE61/+mCq3R0TPPRnY1e"
+   }
+
+  :todo.handler.users/example2
+  {}
+
+
   ;; db migrate
   :duct.migrator/ragtime
   {:migrations [#ig/ref :todo.migration/create-entries
@@ -65,8 +76,12 @@
          email TEXT UNIQUE, 
          password TEXT)"]
    :down ["DROP TABLE users"]}
-  }
- 
+
+
+  ;; buddy
+  :duct.middleware.buddy/authentication
+  {:backend :jws
+   :secret #ig/ref :todo.handler.users/signin}}
 
  
  :duct.profile/dev   #duct/include "dev"
